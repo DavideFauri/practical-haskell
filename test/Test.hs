@@ -1,5 +1,6 @@
 import Test.Tasty
 import Test.Tasty.HUnit
+import TestChapter2 (chapter2Tests)
 
 main :: IO ()
 main = defaultMain testChapters
@@ -9,6 +10,7 @@ testChapters =
   testGroup
     "Practical Haskell"
     [ areTestsRunning,
+      chapter2Tests
     ]
 
 areTestsRunning :: TestTree

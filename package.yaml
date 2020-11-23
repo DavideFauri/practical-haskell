@@ -35,5 +35,6 @@ tests:
     dependencies:
       - practical-haskell
       - tasty
-      - tasty-quickcheck
       - tasty-hunit
+      - tasty-quickcheck
+      - tasty-expected-failure
