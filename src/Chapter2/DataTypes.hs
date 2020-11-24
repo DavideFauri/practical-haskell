@@ -6,7 +6,14 @@ data Client
   | Individual Person Bool
   deriving (Show)
 
-data Person = Person String String
+data Person = Person String String Gender
   deriving (Show)
 
 data Gender = Male | Female | Unknown
+  deriving (Show)
+
+data TimeMachine = TimeMachine String Integer String TimeDirection Float
+  deriving (Show)
+
+data TimeDirection = Forward | Backward | BiDirectional
+  deriving (Show)
