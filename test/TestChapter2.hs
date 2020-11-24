@@ -87,11 +87,10 @@ testEmptyOrFirstEmpty =
         forAll
           (arbitrary :: Gen [[Int]]) --TODO: use other types than Int
           (listEmptyOrFirstEmpty . ([] :)),
-      expectFail $
-        testProperty "... when the above is not true" $
-          forAll
-            (prependNonEmptyTo arbitrary :: Gen [[Int]]) --TODO: use other types than Int
-            listEmptyOrFirstEmpty
+      testProperty "... when the above is not true" $
+        forAll
+          (prependNonEmptyTo arbitrary :: Gen [[Int]]) --TODO: use other types than Int
+          (not . listEmptyOrFirstEmpty)
     ]
 
 prependNonEmptyTo :: forall a. Arbitrary a => Gen [[a]] -> Gen [[a]]
@@ -109,11 +108,10 @@ testOnlyOneElement =
         forAll
           (arbitrary :: Gen Int) --TODO: use other types than Int
           (listOnlyOneElement . pure),
-      expectFail $
-        testProperty "... when it has two or more elements" $
-          forAll
-            (arbitrary `suchThat` (\l -> length l >= 2) :: Gen [Int]) --TODO: use other types than Int
-            listOnlyOneElement
+      testProperty "... when it has two or more elements" $
+        forAll
+          (arbitrary `suchThat` (\l -> length l >= 2) :: Gen [Int]) --TODO: use other types than Int
+          (not . listOnlyOneElement)
     ]
 
 -- Write an expression that concatenates two lists given inside another list.
