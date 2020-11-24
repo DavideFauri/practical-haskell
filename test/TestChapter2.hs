@@ -1,11 +1,17 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ParallelListComp #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module TestChapter2 where
 
-import Chapter2.DataTypes
+import Chapter2.DataTypes hiding (TimeMachine (..))
+import qualified Chapter2.DataTypes as D (TimeMachine (..))
 import Chapter2.ListsOfLists
 import Chapter2.MatchesAndGuards
+import Chapter2.PatternMatching hiding (discountTimeMachines)
+import qualified Chapter2.PatternMatching as P (discountTimeMachines)
+import Chapter2.Records hiding (TimeMachine (..), discountTimeMachines)
+import qualified Chapter2.Records as R (TimeMachine (..), discountTimeMachines)
 import Data.Function (on)
 import Test.Tasty
 import Test.Tasty.ExpectedFailure
@@ -20,7 +26,7 @@ chapter2Tests =
     [ testListsOfLists,
       testDataTypes,
       testPatternMatching,
-      testMatchesGuards,
+      testMatchesAndGuards,
       testRecords
     ]
 
@@ -173,7 +179,7 @@ instance Arbitrary Gender where
 
 testClientGeneration :: TestTree
 testClientGeneration =
-  testProperty "Client datatype can be generated" $
+  testProperty "Client datatype can be generated and is Showable" $
     forAll
       (arbitrary :: Gen Client)
       propClient
@@ -200,13 +206,13 @@ instance Arbitrary Person where
 
 testTimeMachine :: TestTree
 testTimeMachine =
-  testProperty "TimeMachine datatype can be generated" $
+  testProperty "TimeMachine datatype can be generated and is Showable" $
     forAll
-      (arbitrary :: Gen TimeMachine)
+      (arbitrary :: Gen D.TimeMachine)
       propTimeMachine
   where
     getConstructor = head . words . show
-    propTimeMachine tm@(TimeMachine _ _ _ dir _) =
+    propTimeMachine tm@(D.TimeMachine _ _ _ dir _) =
       -- checkCoverage $
       -- coverTable "Direction" [("Forward'", 30.0), ("Backward'", 30.0), ("BiDirectional'", 30.0)] $
       -- tabulate "Direction" [show (unsafeCoerce dir :: AnyTimeDirection)] $
@@ -227,9 +233,9 @@ instance Arbitrary AnyTimeDirection where
 -- ~33% Forward, ~67% Backward <-- all the "BiDirectional'" get coerced into the last sum type!
 -- The internal representation stays the same, though, so when coercing back to AnyTimeDirection:
 -- ~33% Forward', ~33% Backward', ~33% BiDirectional' <-- I get NO insight on the cardinality of TimeDirection
-instance Arbitrary TimeMachine where
+instance Arbitrary D.TimeMachine where
   arbitrary =
-    TimeMachine
+    D.TimeMachine
       <$> (arbitrary :: Gen String)
       <*> (arbitrary :: Gen Integer)
       <*> (arbitrary :: Gen String)
@@ -298,10 +304,10 @@ testDiscount =
       arbitraryTimeMachinesAndDiscount
       propPriceIsDiscounted
   where
-    getPrice (TimeMachine _ _ _ _ price) = price
-    propPriceIsDiscounted (d, tms) = map ((d *) . getPrice) tms == (map getPrice . discountTimeMachines d) tms
+    getPrice (D.TimeMachine _ _ _ _ price) = price
+    propPriceIsDiscounted (d, tms) = map ((d *) . getPrice) tms == (map getPrice . P.discountTimeMachines d) tms
 
-arbitraryTimeMachinesAndDiscount :: Gen (Float, [TimeMachine])
+arbitraryTimeMachinesAndDiscount :: Gen (Float, [D.TimeMachine])
 arbitraryTimeMachinesAndDiscount = (,) <$> arbitrary <*> arbitrary
 
 -- EXERCISE 2-6
@@ -349,4 +355,42 @@ arbitraryZips = do
 -- EXERCISE 2-7
 
 testRecords :: TestTree
-testRecords = testGroup "Exercise 2-7" []
+testRecords =
+  testGroup
+    "Exercise 2-7"
+    [ testRecordTimeMachines,
+      testRecordDiscount
+    ]
+
+testRecordTimeMachines :: TestTree
+testRecordTimeMachines =
+  testProperty "Time Machine record type can be generated and is Showable" $
+    forAll
+      (arbitrary :: Gen R.TimeMachine)
+      propRecordTimeMachine
+  where
+    getConstructor = head . words . show
+    propRecordTimeMachine tm =
+      getConstructor tm == "TimeMachine"
+
+testRecordDiscount :: TestTree
+testRecordDiscount =
+  testProperty "Record Time Machines are discounted correctly" $
+    forAll
+      arbitraryRecordTimeMachinesAndDiscount
+      propPriceIsDiscounted
+  where
+    getPrice tm@R.TimeMachine {R.price} = price
+    propPriceIsDiscounted (d, tms) = map ((d *) . getPrice) tms == (map getPrice . R.discountTimeMachines d) tms
+
+arbitraryRecordTimeMachinesAndDiscount :: Gen (Float, [R.TimeMachine])
+arbitraryRecordTimeMachinesAndDiscount = (,) <$> arbitrary <*> arbitrary
+
+instance Arbitrary R.TimeMachine where
+  arbitrary =
+    R.TimeMachine
+      <$> (arbitrary :: Gen String)
+      <*> (arbitrary :: Gen Integer)
+      <*> (arbitrary :: Gen String)
+      <*> unsafeCoerce (arbitrary :: Gen AnyTimeDirection)
+      <*> (arbitrary :: Gen Float)
