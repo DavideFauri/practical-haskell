@@ -28,6 +28,14 @@ specialMultiples n
 
 -- Define the famous ackermann function. Try using guards
 ackermann :: Integer -> Integer -> Integer
+ackermann 0 n = n + 1
+ackermann m 0 | m > 0 = ackermann (m -1) 1
+ackermann m n | m > 0 && n > 0 = ackermann (m -1) $ ackermann m (n -1)
+ackermann _ _ = 0
 
 -- Define the unzip function, which takes a list of tuples and returns two lists, one with all the first components and other one with the seconds.
 unzip :: [(a, b)] -> ([a], [b])
+unzip [] = ([], [])
+unzip ((a, b) : ts) = (a : as, b : bs)
+  where
+    (as, bs) = Chapter2.MatchesAndGuards.unzip ts

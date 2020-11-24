@@ -25,6 +25,23 @@ fibonacci n = fibonacci (n -1) + fibonacci (n -2)
 -- Write a function that returns the number of clients of each gender.
 -- You may need to define an auxiliary data type to hold the results of this function.
 clientsPerGender :: [Client] -> [(Gender, Int)]
+clientsPerGender clients = [(Male, countMale), (Female, countFemale), (Unknown, countUnknown)]
+  where
+    countMale = howMany Male individuals
+    countFemale = howMany Female individuals
+    countUnknown = howMany Unknown individuals + length notIndividuals
+    individuals = filter isIndividual clients
+    notIndividuals = filter (not . isIndividual) clients
+    isIndividual (Individual _ _) = True
+    isIndividual _ = False
+    howMany gender people = length $ filter (hasThisGender gender) people
+      where
+        hasThisGender Male (Individual (Person _ _ Male) _) = True
+        hasThisGender Female (Individual (Person _ _ Female) _) = True
+        hasThisGender Unknown (Individual (Person _ _ Unknown) _) = True
+        hasThisGender _ _ = False
 
 -- Write a function that, given a list of time machines, decreases their price by some percentage.
 discountTimeMachines :: Float -> [TimeMachine] -> [TimeMachine]
+discountTimeMachines _ [] = []
+discountTimeMachines percentage ((TimeMachine ma mo na wh pr) : tms) = TimeMachine ma mo na wh (pr * percentage) : discountTimeMachines percentage tms

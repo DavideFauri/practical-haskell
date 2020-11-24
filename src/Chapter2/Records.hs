@@ -3,6 +3,7 @@
 
 module Chapter2.Records where
 
+import Chapter2.DataTypes (TimeDirection (..))
 import Data.Char (toUpper)
 
 data ClientR
@@ -34,6 +35,17 @@ nameInCapitals p@PersonR {firstName = initial : rest} =
 nameInCapitals p@PersonR {firstName = ""} = p
 
 -- rewrite the TimeMachine data type defined earlier using records.
+data TimeMachine = TimeMachine
+  { manufacturer :: String,
+    modelNumber :: Integer,
+    modelName :: String,
+    timeDirection :: TimeDirection,
+    price :: Float
+  }
+  deriving (Show)
 
 -- Write a function that, given a list of time machines, decreases their price by some percentage.
 discountTimeMachines :: Float -> [TimeMachine] -> [TimeMachine]
+discountTimeMachines percentage = map discount
+  where
+    discount tm@TimeMachine {price = oldPrice} = tm {price = oldPrice * percentage}
