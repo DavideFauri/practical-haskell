@@ -4,11 +4,13 @@ module TestChapter2 where
 
 import Chapter2.DataTypes
 import Chapter2.ListsOfLists
+import Chapter2.PatternMatching
+import Data.Function (on)
 import Test.Tasty
 import Test.Tasty.ExpectedFailure
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
-import Unsafe.Coerce
+import Unsafe.Coerce (unsafeCoerce)
 
 chapter2Tests :: TestTree
 chapter2Tests =
@@ -225,12 +227,81 @@ instance Arbitrary AnyTimeDirection where
 -- The internal representation stays the same, though, so when coercing back to AnyTimeDirection:
 -- ~33% Forward', ~33% Backward', ~33% BiDirectional' <-- I get NO insight on the cardinality of TimeDirection
 instance Arbitrary TimeMachine where
-  arbitrary = TimeMachine <$> arbitrary <*> arbitrary <*> arbitrary <*> unsafeCoerce (arbitrary :: Gen AnyTimeDirection) <*> arbitrary
+  arbitrary =
+    TimeMachine
+      <$> (arbitrary :: Gen String)
+      <*> (arbitrary :: Gen Integer)
+      <*> (arbitrary :: Gen String)
+      <*> unsafeCoerce (arbitrary :: Gen AnyTimeDirection)
+      <*> (arbitrary :: Gen Float)
 
 -- EXERCISE 2-5
 
 testPatternMatching :: TestTree
-testPatternMatching = testGroup "Exercise 2-5" []
+testPatternMatching =
+  testGroup
+    "Exercise 2-5"
+    [ testCountGenders,
+      testDiscount
+    ]
+
+testCountGenders :: TestTree
+testCountGenders =
+  testGroup
+    "Client gender counting"
+    [ testCountShape,
+      testCountCorrect
+    ]
+
+testCountShape :: TestTree
+testCountShape =
+  testProperty "...returns a list with the correct shape" $
+    forAll
+      arbitraryGenderCount
+      propCountShape
+  where
+    propCountShape (clients, counts) = isCorrectShape $ clientsPerGender clients
+    isCorrectShape [(Male, _), (Female, _), (Unknown, _)] = True
+    isCorrectShape _ = False
+
+testCountCorrect :: TestTree
+testCountCorrect =
+  testProperty "...returns the correct count for genders" $
+    forAll
+      arbitraryGenderCount
+      propCountCorrect
+  where
+    propCountCorrect (clients, counts) = and $ zipWith compareCounts (clientsPerGender clients) counts
+    compareCounts = (==) `on` snd
+
+arbitraryGenderCount :: Gen ([Client], [(Gender, Int)])
+arbitraryGenderCount = do
+  males <- listOf (individualOfGender Male)
+  females <- listOf (individualOfGender Female)
+  unknowns <- listOf (oneof [individualOfGender Unknown, arbitrary `suchThat` (not . isIndividual)])
+  clients <- shuffle . concat $ [males, females, unknowns]
+  let counts = [(Male, length males), (Female, length females), (Unknown, length unknowns)]
+  pure (clients, counts)
+
+individualOfGender :: Gender -> Gen Client
+individualOfGender g = Individual <$> (Person <$> arbitrary <*> arbitrary <*> pure g) <*> arbitrary
+
+isIndividual :: Client -> Bool
+isIndividual (Individual _ _) = True
+isIndividual _ = False
+
+testDiscount :: TestTree
+testDiscount =
+  testProperty "Time Machines are discounted correctly" $
+    forAll
+      arbitraryTimeMachinesAndDiscount
+      propPriceIsDiscounted
+  where
+    getPrice (TimeMachine _ _ _ _ price) = price
+    propPriceIsDiscounted (d, tms) = map ((d *) . getPrice) tms == (map getPrice . discountTimeMachines d) tms
+
+arbitraryTimeMachinesAndDiscount :: Gen (Float, [TimeMachine])
+arbitraryTimeMachinesAndDiscount = (,) <$> arbitrary <*> arbitrary
 
 -- EXERCISE 2-6
 
