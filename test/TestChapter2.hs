@@ -1,10 +1,11 @@
+{-# LANGUAGE ParallelListComp #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module TestChapter2 where
 
 import Chapter2.DataTypes
 import Chapter2.ListsOfLists
-import Chapter2.PatternMatching
+import Chapter2.MatchesAndGuards
 import Data.Function (on)
 import Test.Tasty
 import Test.Tasty.ExpectedFailure
@@ -305,8 +306,45 @@ arbitraryTimeMachinesAndDiscount = (,) <$> arbitrary <*> arbitrary
 
 -- EXERCISE 2-6
 
-testMatchesGuards :: TestTree
-testMatchesGuards = testGroup "Exercise 2-6" []
+testMatchesAndGuards :: TestTree
+testMatchesAndGuards =
+  testGroup
+    "Exercise 2-6"
+    [ testAckermann,
+      testUnzip
+    ]
+
+testAckermann :: TestTree
+testAckermann =
+  testGroup
+    "(beginning of) Ackermann function is correct"
+    [testSingleAckermann n m exp | n <- ns, m <- ms | exp <- expected_results]
+  where
+    ns = [0 .. 3]
+    ms = [0 .. 2]
+    expected_results = [1, 2, 3, 2, 3, 4, 3, 5, 7, 5, 13, 29]
+
+testSingleAckermann :: Integer -> Integer -> Integer -> TestTree
+testSingleAckermann n m exp =
+  testCase ("Testing ackermann " <> show n <> " " <> show m) $
+    ackermann n m @?= exp
+
+testUnzip :: TestTree
+testUnzip =
+  testProperty "Unzipping correctly" $
+    forAll
+      (arbitraryZips :: Gen ([Int], [Int], [(Int, Int)]))
+      propUnzip
+  where
+    propUnzip (as, bs, zs) = Chapter2.MatchesAndGuards.unzip zs == (as, bs)
+
+arbitraryZips :: forall a b. (Arbitrary a, Arbitrary b) => Gen ([a], [b], [(a, b)])
+arbitraryZips = do
+  as <- arbitrary :: Gen [a]
+  bs <- arbitrary :: Gen [b]
+  let zs = zip as bs
+  let n_zs = length zs
+  pure (take n_zs as, take n_zs bs, zs)
 
 -- EXERCISE 2-7
 
