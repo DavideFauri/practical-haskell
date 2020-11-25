@@ -1,4 +1,4 @@
-module Chapter3.ParametricPolimorphism where
+module Chapter3.ParametricPolymorphism where
 
 maybeString :: Maybe a -> String
 maybeString (Just _) = "Just"
