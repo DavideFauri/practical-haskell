@@ -2,6 +2,7 @@ module TestChapter3 where
 
 import Chapter3.FunctionsAsParameters
 import Chapter3.ParametricPolymorphism
+import Instances
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
