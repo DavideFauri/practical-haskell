@@ -30,16 +30,21 @@ data SamePair a = SamePair a a
 -- Try to understand what the following functions do and which type will be inferred by the interpreter.
 -- Give the most polymorphic answer from all possible ones.
 
+swapTriple :: (a, b, c) -> (b, c, a)
 swapTriple (x, y, z) = (y, z, x)
 
+duplicate :: a -> (a, a)
 duplicate x = (x, x)
 
+nothing :: a -> Maybe b
 nothing _ = Nothing
 
+index :: Num b => [a] -> [(b, a)]
 index [] = []
 index [x] = [(0, x)]
 index (x : xs) =
   let indexed@((n, _) : _) = index xs
    in (n + 1, x) : indexed
 
+maybeA :: [a] -> Char
 maybeA [] = 'a'
