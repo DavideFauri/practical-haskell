@@ -31,16 +31,29 @@ duplicateOdds = map (* 2) . filter odd
 
 -- filterOnes, which returns only the elements equal to the constant 1.
 filterOnes :: (Eq a, Num a) => [a] -> [a]
+filterOnes = filter (1 ==)
 
 -- filterANumber, which returns only the elements equal to some number that is given via a parameter.
 filterANumber :: (Eq a, Num a) => a -> [a] -> [a]
+filterANumber n = filter (n ==)
 
 -- filterNot, which performs the reverse duty of filter. It returns only those elements of the list that do not fulfill the condition.
 filterNot :: (a -> Bool) -> [a] -> [a]
+filterNot cond = filter (not . cond)
 
 -- filterGovOrgs, which takes a list of Clients (as defined before) and returns only those that are government organizations.
 -- Write filterGovOrgs using an auxiliary function isGovOrg
 filterGovOrgs :: [Client i] -> [Client i]
+filterGovOrgs = filter isGovOrg
+  where
+    isGovOrg GovOrg {} = True
+    isGovOrg _ = False
 
 -- Write filterGovOrgs using a \case expression
 filterGovOrgs' :: [Client i] -> [Client i]
+filterGovOrgs' =
+  filter
+    ( \case
+        GovOrg {} -> True
+        _ -> False
+    )
