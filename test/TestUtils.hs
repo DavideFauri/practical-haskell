@@ -9,6 +9,7 @@ import Control.Exception (SomeException, handleJust)
 -- import Test.Tasty ( TestTree )
 
 import Data.List (intercalate, isPrefixOf)
+import Test.QuickCheck.Function
 import Test.Tasty.ExpectedFailure (wrapTest)
 import Test.Tasty.QuickCheck (Arbitrary (..), Gen, oneof)
 import Test.Tasty.Runners
@@ -36,6 +37,13 @@ expectExceptions prefixes = wrapTest (handleJust selector handler)
           }
     prefixesMatching e = filter (`isPrefixOf` show e) prefixes
     quoted s = "\"" <> s <> "\""
+
+-- Generating a fake arbitrary function from a specified one (like pure False :: Gen Bool)
+
+-- Horrible hack of course, but it works as long as we only use `applyFun (Fun _ f) = f`
+-- The unsafeCoerce is just to avoid raising "undefined" exceptions when trying to show the function itself
+wrapSpecifiedFunction :: (Function a) => (a -> b) -> Fun a b
+wrapSpecifiedFunction f = Fun (function f, undefined, unsafeCoerce True) f
 
 -- Arbitrary Instances
 
