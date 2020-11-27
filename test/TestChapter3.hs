@@ -1,11 +1,11 @@
 module TestChapter3 where
 
 import Chapter3.FunctionsAsParameters
-import Chapter3.ParametricPolymorphism
-import Instances
-import Test.Tasty
+import Chapter3.ParametricPolymorphism as P
+import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
+import TestUtils
 
 chapter3Tests :: TestTree
 chapter3Tests =
@@ -80,20 +80,20 @@ testFilterGovOrgsFunc filterFunc =
       arbitraryGovOrgs
       propFilterGovOrgs
   where
-    propFilterGovOrgs (gos, clients) = filterFunc clients `setEquivalent` gos
+    propFilterGovOrgs (gos, clients) = filterFunc (map paramClient clients) `setEquivalent` map paramClient gos
       where
         setEquivalent a b = all (`elem` b) a && all (`elem` a) b
 
-arbitraryGovOrgs :: Arbitrary i => Gen ([Client i], [Client i])
+arbitraryGovOrgs :: Arbitrary i => Gen ([AnyParamClient i], [AnyParamClient i])
 arbitraryGovOrgs = do
-  gos <- listOf (arbitrary `suchThat` isGovOrg)
-  not_gos <- listOf (arbitrary `suchThat` (not . isGovOrg))
-  clients <- shuffle . concat $ [gos, not_gos]
+  gos <- listOf (arbitrary `suchThat` (_isGovOrg . paramClient))
+  not_gos <- listOf (arbitrary `suchThat` (not . _isGovOrg . paramClient))
+  clients <- shuffle (gos ++ not_gos)
   pure (gos, clients)
 
-isGovOrg :: Arbitrary i => Client i -> Bool
-isGovOrg GovOrg {} = True
-isGovOrg _ = False
+_isGovOrg :: Client i -> Bool
+_isGovOrg GovOrg {} = True
+_isGovOrg _ = False
 
 -- EXERCISE 3-3
 
