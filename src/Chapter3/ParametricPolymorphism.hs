@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-partial-fields -Wno-incomplete-uni-patterns -Wno-incomplete-patterns #-}
+
 module Chapter3.ParametricPolymorphism where
 
 maybeString :: Maybe a -> String

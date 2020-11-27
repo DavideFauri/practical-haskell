@@ -10,15 +10,14 @@ import Chapter2.ListsOfLists
 import Chapter2.MatchesAndGuards
 import Chapter2.PatternMatching hiding (discountTimeMachines)
 import qualified Chapter2.PatternMatching as P (discountTimeMachines)
-import Chapter2.Records hiding (TimeMachine (..), discountTimeMachines)
 import qualified Chapter2.Records as R (TimeMachine (..), discountTimeMachines)
 import Data.Function (on)
-import Instances
-import Test.Tasty
-import Test.Tasty.ExpectedFailure
+import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
-import Unsafe.Coerce (unsafeCoerce)
+import TestUtils
+
+-- import Unsafe.Coerce (unsafeCoerce) -- See issue with AnyTimeDirection in TestUtils.hs
 
 chapter2Tests :: TestTree
 chapter2Tests =
@@ -129,25 +128,18 @@ testConcatenateTwo :: TestTree
 testConcatenateTwo =
   testGroup
     "Concatenate two lists given inside another list"
-    [ expectFailBecause "The test should raise an error" $
+    [ expectException "" $
         testCase "... when there are no lists" $
-          assertBool "" $ seq (concatenateTwoLists []) True,
+          concatenateTwoLists [] `seq` assertBool "" True,
       testProperty "... when there is only one list" $
         forAll
           (arbitrary `suchThat` (\l -> length l == 1) :: Gen [[Int]]) --TODO: use other types than Int
           (\l -> concatenateTwoLists l == head l),
       testProperty "... when there are at least two lists" $
         forAll
-          (arbitraryTwoOrMoreLists :: Gen [[Int]]) --TODO: use other types than Int
-          (\l@(a : b : _) -> concatenateTwoLists l == a ++ b)
+          (arbitrary `suchThat` (\l -> length l >= 2) :: Gen [[Int]]) --TODO: use other types than Int
+          (\l -> concatenateTwoLists l == head l ++ (l !! 1))
     ]
-
-arbitraryTwoOrMoreLists :: forall a. Arbitrary a => Gen [[a]]
-arbitraryTwoOrMoreLists = do
-  as <- arbitrary :: Gen [a]
-  bs <- arbitrary :: Gen [a]
-  rest <- arbitrary :: Gen [[a]]
-  pure $ as : bs : rest
 
 -- EXERCISE 2-4
 
@@ -164,7 +156,7 @@ testGenderShowable :: TestTree
 testGenderShowable =
   testProperty "Gender datatype is Showable" $
     forAll
-      (arbitrary :: Gen Gender)
+      (arbitrary :: Gen AnyGender)
       propGender
   where
     genders = ["Male", "Female", "Unknown"]
@@ -172,14 +164,14 @@ testGenderShowable =
     propGender g =
       checkCoverage $
         coverTable "Gender" (zip genders $ repeat minProbEachGender) $
-          tabulate "Gender" [show g] $
-            show g `elem` genders
+          tabulate "Gender" [show (gender g)] $
+            show (gender g) `elem` genders
 
 testClientGeneration :: TestTree
 testClientGeneration =
   testProperty "Client datatype can be generated and is Showable" $
     forAll
-      (arbitrary :: Gen Client)
+      (arbitrary :: Gen AnyClient)
       propClient
   where
     clients = ["GovOrg", "Company", "Individual"]
@@ -188,22 +180,26 @@ testClientGeneration =
     propClient c =
       checkCoverage $
         coverTable "Client" (zip clients $ repeat minProbEachClient) $
-          tabulate "Client" [getConstructor c] $
-            getConstructor c `elem` clients
+          tabulate "Client" [getConstructor (client c)] $
+            getConstructor (client c) `elem` clients
 
 testTimeMachine :: TestTree
 testTimeMachine =
   testProperty "TimeMachine datatype can be generated and is Showable" $
     forAll
-      (arbitrary :: Gen D.TimeMachine)
+      (arbitrary :: Gen AnyTimeMachine)
       propTimeMachine
   where
     getConstructor = head . words . show
-    propTimeMachine tm@(D.TimeMachine _ _ _ dir _) =
-      -- checkCoverage $
-      -- coverTable "Direction" [("Forward'", 30.0), ("Backward'", 30.0), ("BiDirectional'", 30.0)] $
-      -- tabulate "Direction" [show (unsafeCoerce dir :: AnyTimeDirection)] $
-      getConstructor tm == "TimeMachine"
+
+    -- ------ See issue with AnyTimeDirection in TestUtils.hs -------
+    -- propTimeMachine machine@(AnyTimeMachine (D.TimeMachine _ _ _ dir _)) =
+    -- checkCoverage $
+    -- coverTable "Direction" [("Forward'", 30.0), ("Backward'", 30.0), ("BiDirectional'", 30.0)] $
+    -- tabulate "Direction" [show (unsafeCoerce dir :: AnyTimeDirection)] $
+
+    propTimeMachine machine =
+      getConstructor (getTM machine) == "TimeMachine"
 
 -- EXERCISE 2-5
 
@@ -230,7 +226,7 @@ testCountShape =
       arbitraryGenderCount
       propCountShape
   where
-    propCountShape (clients, counts) = isCorrectShape $ clientsPerGender clients
+    propCountShape (clients, _) = isCorrectShape $ clientsPerGender (map client clients)
     isCorrectShape [(Male, _), (Female, _), (Unknown, _)] = True
     isCorrectShape _ = False
 
@@ -241,20 +237,29 @@ testCountCorrect =
       arbitraryGenderCount
       propCountCorrect
   where
-    propCountCorrect (clients, counts) = and $ zipWith compareCounts (clientsPerGender clients) counts
+    propCountCorrect (clients, counts) = and $ zipWith compareCounts (clientsPerGender (map client clients)) counts
     compareCounts = (==) `on` snd
 
-arbitraryGenderCount :: Gen ([Client], [(Gender, Int)])
+arbitraryGenderCount :: Gen ([AnyClient], [(Gender, Int)])
 arbitraryGenderCount = do
   males <- listOf (individualOfGender Male)
   females <- listOf (individualOfGender Female)
-  unknowns <- listOf (oneof [individualOfGender Unknown, arbitrary `suchThat` (not . isIndividual)])
+  unknowns <- listOf (oneof [individualOfGender Unknown, arbitrary `suchThat` (not . isIndividual . client)])
   clients <- shuffle . concat $ [males, females, unknowns]
   let counts = [(Male, length males), (Female, length females), (Unknown, length unknowns)]
   pure (clients, counts)
 
-individualOfGender :: Gender -> Gen Client
-individualOfGender g = Individual <$> (Person <$> arbitrary <*> arbitrary <*> pure g) <*> arbitrary
+individualOfGender :: Gender -> Gen AnyClient
+individualOfGender g =
+  AnyClient
+    <$> ( Individual
+            <$> ( Person
+                    <$> arbitrary
+                    <*> arbitrary
+                    <*> pure g
+                )
+            <*> arbitrary
+        )
 
 isIndividual :: Client -> Bool
 isIndividual (Individual _ _) = True
@@ -268,9 +273,9 @@ testDiscount =
       propPriceIsDiscounted
   where
     getPrice (D.TimeMachine _ _ _ _ price) = price
-    propPriceIsDiscounted (d, tms) = map ((d *) . getPrice) tms == (map getPrice . P.discountTimeMachines d) tms
+    propPriceIsDiscounted (d, tms) = map ((d *) . getPrice . getTM) tms == (map getPrice . P.discountTimeMachines d) (map getTM tms)
 
-arbitraryTimeMachinesAndDiscount :: Gen (Float, [D.TimeMachine])
+arbitraryTimeMachinesAndDiscount :: Gen (Float, [AnyTimeMachine])
 arbitraryTimeMachinesAndDiscount = (,) <$> arbitrary <*> arbitrary
 
 -- EXERCISE 2-6
@@ -287,16 +292,16 @@ testAckermann :: TestTree
 testAckermann =
   testGroup
     "(beginning of) Ackermann function is correct"
-    [testSingleAckermann n m exp | n <- ns, m <- ms | exp <- expected_results]
+    [testSingleAckermann n m exp_res | n <- ns, m <- ms | exp_res <- expected_results]
   where
     ns = [0 .. 3]
     ms = [0 .. 2]
     expected_results = [1, 2, 3, 2, 3, 4, 3, 5, 7, 5, 13, 29]
 
 testSingleAckermann :: Integer -> Integer -> Integer -> TestTree
-testSingleAckermann n m exp =
+testSingleAckermann n m exp_res =
   testCase ("Testing ackermann " <> show n <> " " <> show m) $
-    ackermann n m @?= exp
+    ackermann n m @?= exp_res
 
 testUnzip :: TestTree
 testUnzip =
@@ -329,12 +334,12 @@ testRecordTimeMachines :: TestTree
 testRecordTimeMachines =
   testProperty "Time Machine record type can be generated and is Showable" $
     forAll
-      (arbitrary :: Gen R.TimeMachine)
+      (arbitrary :: Gen AnyRecordTimeMachine)
       propRecordTimeMachine
   where
     getConstructor = head . words . show
     propRecordTimeMachine tm =
-      getConstructor tm == "TimeMachine"
+      getConstructor (getRTM tm) == "TimeMachine"
 
 testRecordDiscount :: TestTree
 testRecordDiscount =
@@ -343,8 +348,8 @@ testRecordDiscount =
       arbitraryRecordTimeMachinesAndDiscount
       propPriceIsDiscounted
   where
-    getPrice tm@R.TimeMachine {R.price} = price
-    propPriceIsDiscounted (d, tms) = map ((d *) . getPrice) tms == (map getPrice . R.discountTimeMachines d) tms
+    getPrice R.TimeMachine {R.price} = price
+    propPriceIsDiscounted (d, tms) = map ((d *) . getPrice . getRTM) tms == (map getPrice . R.discountTimeMachines d) (map getRTM tms)
 
-arbitraryRecordTimeMachinesAndDiscount :: Gen (Float, [R.TimeMachine])
+arbitraryRecordTimeMachinesAndDiscount :: Gen (Float, [AnyRecordTimeMachine])
 arbitraryRecordTimeMachinesAndDiscount = (,) <$> arbitrary <*> arbitrary
