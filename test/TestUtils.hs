@@ -5,10 +5,37 @@ module TestUtils where
 import qualified Chapter2.DataTypes as D (Client (..), Gender (..), Person (..), TimeMachine (..))
 import qualified Chapter2.Records as R (TimeMachine (..))
 import qualified Chapter3.ParametricPolymorphism as P (Client (..), Person (..))
+import Control.Exception (SomeException, handleJust)
 -- import Test.Tasty ( TestTree )
 
+import Data.List (intercalate, isPrefixOf)
+import Test.Tasty.ExpectedFailure (wrapTest)
 import Test.Tasty.QuickCheck (Arbitrary (..), Gen, oneof)
+import Test.Tasty.Runners
 import Unsafe.Coerce (unsafeCoerce)
+
+-- Handling testCases which we want to raise an Exception
+
+expectException :: String -> TestTree -> TestTree
+expectException s = expectExceptions [s]
+
+expectExceptions :: [String] -> TestTree -> TestTree
+expectExceptions prefixes = wrapTest (handleJust selector handler)
+  where
+    selector :: SomeException -> Maybe SomeException
+    selector e
+      | not . null . prefixesMatching $ e = Just e
+      | otherwise = Nothing
+    handler e =
+      pure
+        Result
+          { resultOutcome = Success,
+            resultDescription = "Exception matches: " <> (intercalate " OR " . map quoted) (prefixesMatching e),
+            resultShortDescription = "FAIL (expected)",
+            resultTime = 0
+          }
+    prefixesMatching e = filter (`isPrefixOf` show e) prefixes
+    quoted s = "\"" <> s <> "\""
 
 -- Arbitrary Instances
 

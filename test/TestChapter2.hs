@@ -128,7 +128,7 @@ testConcatenateTwo :: TestTree
 testConcatenateTwo =
   testGroup
     "Concatenate two lists given inside another list"
-    [ expectFailBecause "The test should raise an error" $
+    [ expectException "" $
         testCase "... when there are no lists" $
           assertBool "" $ seq (concatenateTwoLists []) True,
       testProperty "... when there is only one list" $
