@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Chapter3.FunctionsAsParameters where
 

@@ -130,7 +130,7 @@ testConcatenateTwo =
     "Concatenate two lists given inside another list"
     [ expectException "" $
         testCase "... when there are no lists" $
-          assertBool "" $ seq (concatenateTwoLists []) True,
+          concatenateTwoLists [] `seq` assertBool "" True,
       testProperty "... when there is only one list" $
         forAll
           (arbitrary `suchThat` (\l -> length l == 1) :: Gen [[Int]]) --TODO: use other types than Int
@@ -138,6 +138,7 @@ testConcatenateTwo =
       testProperty "... when there are at least two lists" $
         forAll
           (arbitrary `suchThat` (\l -> length l >= 2) :: Gen [[Int]]) --TODO: use other types than Int
+          (\l -> concatenateTwoLists l == head l ++ (l !! 1))
     ]
 
 -- EXERCISE 2-4
@@ -291,16 +292,16 @@ testAckermann :: TestTree
 testAckermann =
   testGroup
     "(beginning of) Ackermann function is correct"
-    [testSingleAckermann n m exp | n <- ns, m <- ms | exp <- expected_results]
+    [testSingleAckermann n m exp_res | n <- ns, m <- ms | exp_res <- expected_results]
   where
     ns = [0 .. 3]
     ms = [0 .. 2]
     expected_results = [1, 2, 3, 2, 3, 4, 3, 5, 7, 5, 13, 29]
 
 testSingleAckermann :: Integer -> Integer -> Integer -> TestTree
-testSingleAckermann n m exp =
+testSingleAckermann n m exp_res =
   testCase ("Testing ackermann " <> show n <> " " <> show m) $
-    ackermann n m @?= exp
+    ackermann n m @?= exp_res
 
 testUnzip :: TestTree
 testUnzip =

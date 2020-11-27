@@ -20,7 +20,7 @@ chapter3Tests =
 testFilters :: TestTree
 testFilters =
   testGroup
-    "Filters"
+    "Exercise 3-2"
     [ testFilterOnes,
       testFilterANumber,
       testFilterNot,
@@ -45,8 +45,8 @@ testFilterANumber =
   where
     propFilterANumber (n, lst) = all (n ==) $ filterANumber n lst
 
-arbitraryNumberList :: (Arbitrary a, Num a, Eq a) => Gen (a, [a])
-arbitraryNumberList = oneof [randomNumberList, randomNumberList `suchThat` (\(n, l) -> n `elem` l)]
+arbitraryNumberList :: (Arbitrary a, Eq a) => Gen (a, [a])
+arbitraryNumberList = oneof [randomNumberList, randomNumberList `suchThat` uncurry elem]
   where
     randomNumberList = (,) <$> arbitrary <*> arbitrary
 
@@ -55,9 +55,13 @@ testFilterNot =
   testGroup
     "filterNot returns the correct result"
     [ testProperty "...for Booleans" $
-        forAll (arbitrary :: Gen [Bool]) (propFilterNot id),
+        forAll
+          (arbitrary :: Gen [Bool])
+          (propFilterNot id),
       testProperty "...for even/odd Ints" $
-        forAll (arbitrary :: Gen [Int]) (propFilterNot even)
+        forAll
+          (arbitrary :: Gen [Int])
+          (propFilterNot even)
     ]
 
 propFilterNot :: (a -> Bool) -> ([a] -> Bool)
@@ -67,10 +71,14 @@ testFilterGovOrgs :: TestTree
 testFilterGovOrgs =
   testGroup
     "filterGovOrgs"
-    [ testCase "Written using `isGovOrg` auxiliary function" $ assertBool "" True, --TODO
-      testFilterGovOrgsFunc (filterGovOrgs :: ([Client Int] -> [Client Int])),
-      testCase "Using a \\case expression" $ assertBool "" True, --TODO
-      testFilterGovOrgsFunc (filterGovOrgs' :: ([Client Int] -> [Client Int]))
+    [ testCase "Written using `isGovOrg` auxiliary function" $
+        assertBool "" True, --TODO
+      testFilterGovOrgsFunc
+        (filterGovOrgs :: ([Client Int] -> [Client Int])),
+      testCase "Using a \\case expression" $
+        assertBool "" True, --TODO
+      testFilterGovOrgsFunc
+        (filterGovOrgs' :: ([Client Int] -> [Client Int]))
     ]
 
 testFilterGovOrgsFunc :: (Eq i, Show i, Arbitrary i) => ([Client i] -> [Client i]) -> TestTree
